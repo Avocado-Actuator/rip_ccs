@@ -24,6 +24,7 @@ void ConsoleIntHandler(void);
 void UARTIntHandler(void);
 void UARTSend(const uint8_t*, uint32_t);
 
+uint8_t recvIndex, STOP_BYTE;
 uint32_t uartSysClock;
 
 #endif /* COMMS_H_ */

@@ -1,6 +1,10 @@
 #include "comms.h"
 
+uint8_t recv[10];
 
+// <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
+// <<<<<<<<<<<< INITS >>>>>>>>>>
+// <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
 
 void CommsInit(uint32_t g_ui32SysClock){
     // Copy over the clock created in main
@@ -24,6 +28,9 @@ void CommsInit(uint32_t g_ui32SysClock){
     // Enable the UART interrupt.
     ROM_IntEnable(INT_UART7);
     ROM_UARTIntEnable(UART7_BASE, UART_INT_RX | UART_INT_RT);
+
+    recvIndex = 0;
+    STOP_BYTE = '!';
     UARTprintf("Communication initialized\n");
 }
 
@@ -51,6 +58,59 @@ void ConsoleInit(void) {
     ROM_UARTIntEnable(UART0_BASE, UART_INT_RX | UART_INT_RT);
     UARTprintf("Console initialized\n");
 }
+
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+// <<<<<<< MESSAGE HANDLING >>>>>>>
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+
+/**
+ * Takes actions on message as appropriate.
+ *
+ * If address does not match our own, bail out and send message on.
+ *
+ * @param buffer - pointer to the message
+ * @param length - the length of the message
+ * @param verbose - if true print to console for debugging
+ * @param echo - if true simply echo the message, can also be helpful for debugging
+ * @return if we successfully handled a message meant for us
+ */
+bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
+    if(echo) {
+        UARTSend((uint8_t *) buffer, length);
+        int i;
+        for (i = 0; i < length; ++i) {
+//            UARTprintf("Text[%d]: %c\n", i, buffer[i]);
+            UARTprintf("%c", buffer[i]);
+        }
+        return false;
+    }
+
+    return false;
+}
+
+/**
+ * Send message to UART connection.
+ *
+ * @param buffer - pointer to the message
+ * @param length - the length of the message
+ */
+void UARTSend(const uint8_t *buffer, uint32_t length) {
+    bool space;
+    int i;
+    for (i = 0; i < length; i++) {
+        // write the next character to the UART.
+        // putchar returns false if the send FIFO is full
+        space = ROM_UARTCharPutNonBlocking(UART7_BASE, buffer[i]);
+        // if send FIFO is full, wait until we can put the char in
+        while (!space) {
+            space = ROM_UARTCharPutNonBlocking(UART7_BASE, buffer[i]);
+        }
+    }
+}
+
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+// <<<<<<<<<<<< HANDLERS >>>>>>>>>>
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
 
 //*****************************************************************************
 // The console interrupt handler.
@@ -84,25 +144,22 @@ void UARTIntHandler(void) {
     ROM_UARTIntClear(UART7_BASE, ui32Status);
 
     // Loop while there are characters in the receive FIFO.
-    while(ROM_UARTCharsAvail(UART7_BASE)) {
-        // Read the next character from the UART and write it back to the UART.
-        ROM_UARTCharPutNonBlocking(UART0_BASE, ROM_UARTCharGetNonBlocking(UART7_BASE));
-        // Blink the LED to show a character transfer is occuring.
-        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, GPIO_PIN_0);
-        // Delay for 1 millisecond.  Each SysCtlDelay is about 3 clocks.
-        SysCtlDelay(uartSysClock / (1000 * 3));
-        // Turn off the LED
-        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
-    }
-}
+//    while(ROM_UARTCharsAvail(UART7_BASE)) {
+    // Read the next character from the UART and write it back to the UART.
+    uint8_t character = ROM_UARTCharGetNonBlocking(UART7_BASE);
+    recv[recvIndex++] = character;
 
-//*****************************************************************************
-// Send a string to the UART.
-//*****************************************************************************
-void UARTSend(const uint8_t *pui8Buffer, uint32_t ui32Count) {
-    // Loop while there are more characters to send.
-    while(ui32Count--) {
-        // Write the next character to the UART.
-        ROM_UARTCharPutNonBlocking(UART7_BASE, *pui8Buffer++);
+    if(character == STOP_BYTE) {
+        handleUART(recv, recvIndex, true, true);
+        recvIndex = 0;
     }
+
+//    ROM_UARTCharPutNonBlocking(UART0_BASE, character);
+    // Blink the LED to show a character transfer is occuring.
+    GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, GPIO_PIN_0);
+    // Delay for 1 millisecond.  Each SysCtlDelay is about 3 clocks.
+    SysCtlDelay(uartSysClock / (1000 * 3));
+    // Turn off the LED
+    GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
+//    }
 }
