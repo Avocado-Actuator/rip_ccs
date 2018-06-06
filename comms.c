@@ -80,6 +80,14 @@ void ConsoleInit(void) {
 // <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
 
 /**
+ * Sets new status
+ *
+ * @param newflag - new status flag
+ */
+uint8_t STATUS;
+void setStatus(uint8_t newflag) { STATUS &= newflag; }
+
+/**
  * Returns string corresponding to given enum value.
  *
  * @param par - enum value whose name to return
@@ -105,9 +113,9 @@ const char* getParameterName(enum Parameter par) {
         case Vel: return "Vel";
         case Cur: return "Cur";
         case Tmp: return "Tmp";
-        case MaxCur: return "MaxCur"; // Max Current
+        case MaxCur: return "MaxCur"; // max current
         case Status: return "Status"; // status register
-        case EStop: return "EStop"; // Emergency stop behavior, kill motor or hold position
+        case EStop: return "EStop"; // emergency stop behavior
         case Adr: return "Adr";
         default: return "NOP";
     }
@@ -141,6 +149,77 @@ void UARTPrintFloat(float val, bool verbose) {
         : UARTprintf("%s\n", str);
 }
 
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+// <<<<<<<<<<<< ACTIONS >>>>>>>>>>>
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+
+/**
+ * Sets given parameter to given value.
+ *
+ * @param par - parameter to set
+ * @param value - value to set parameter to
+ */
+void setData(enum Parameter par, union Flyte * value) {
+    UARTprintf("\nin setData\n");
+    UARTprintf("Target value: %d\n", value->f);
+    switch(par) {
+        case Pos: {
+//            setTargetAngle(value->f);
+//            UARTprintf("New value: ");
+//            UARTPrintFloat(getTargetAngle(), false);
+            setStatus(COMMAND_SUCCESS);
+            break;
+        }
+        case Vel: {
+//            setTargetVelocity(value->f);
+//            UARTprintf("New value: ");
+//            UARTPrintFloat(getTargetVelocity(), false);
+            setStatus(COMMAND_SUCCESS);
+            break;
+        }
+        case Cur: {
+//            setTargetCurrent(value->f);
+//            UARTprintf("New value: ");
+//            UARTPrintFloat(getTargetCurrent(), false);
+//            setStatus(COMMAND_SUCCESS);
+            break;
+        }
+        case Adr: {
+            UARTSetAddress(value->bytes[0]);
+//            UARTprintf("New value: ");
+//            uint8_t temp = UARTGetAddress();
+//            UARTprintf((const char*) &temp, false);
+            setStatus(COMMAND_SUCCESS);
+            break;
+        }
+        case MaxCur: {
+//            setMaxCurrent(value->f);
+//            UARTprintf("New value: ");
+//            UARTPrintFloat(getMaxCurrent(), false);
+            setStatus(COMMAND_SUCCESS);
+            break;
+        }
+        case EStop: {
+//            setEStop(value->bytes[0]);
+            UARTprintf("New value: %x\n", value->bytes[0]);
+//            uint8_t temp = getEStop();
+//            UARTprintf((const char*) &temp, false);
+            setStatus(COMMAND_SUCCESS);
+            break;
+        }
+        case Tmp: {
+            UARTprintf("Invalid set, user tried to set temperature\n");
+            setStatus(COMMAND_FAILURE);
+            break;
+        }
+        default: {
+            UARTprintf("Tried to set invaliad parameter, aborting\n");
+            setStatus(COMMAND_FAILURE);
+            break;
+        }
+    }
+    return;
+}
 
 // <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
 // <<<<<<< MESSAGE HANDLING >>>>>>>
@@ -158,15 +237,22 @@ void UARTPrintFloat(float val, bool verbose) {
  * @return if we successfully handled a message meant for us
  */
 bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
-    int i;
-    for (i = 0; i < length; ++i) {
-//            UARTprintf("Text[%d]: %c\n", i, buffer[i]);
-        UARTprintf("%x", buffer[i]);
+    if(verbose) {
+        UARTprintf("\nNew message:\n");
+        int i;
+        for (i = 0; i < length; ++i) {
+    //            UARTprintf("Text[%d]: %c\n", i, buffer[i]);
+            UARTprintf("%x", buffer[i]);
+        }
+        UARTprintf("\n");
     }
-    UARTprintf("\n");
 
-    if(echo) {
-        UARTSend((uint8_t *) buffer, length);
+    uint8_t crcin = recv[length-2];
+    if(verbose) UARTprintf("CRC byte: %d\n", crcin);
+    if (crc8(0, (uint8_t *)recv, length-2) != crcin){
+        // ********** ERROR ***********
+        // Handle corrupted message
+        UARTprintf("Corrupted message, panic!\n");
         return false;
     }
 
@@ -207,19 +293,19 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
 //            setStatus(COMMAND_FAILURE);
             return true;
         }
+
         // if the cmd is Set then the next entity is a value. This value is either a single float
         // which takes the next four bytes of buffer, or a single byte
         union Flyte setval;
         int i;
-        for (i = 0; i < length - 3; i++){
-            UARTprintf("Byte %d: %x\n", i, buffer[i+2]);
+        for (i = 0; i < length - 4; i++)
             setval.bytes[i] = buffer[i+2];
-        }
+
         if(verbose) {
             UARTprintf("Setting value\n");
             UARTPrintFloat(setval.f, true);
         }
-//        setData(par, &setval);
+        setData(par, &setval);
         return true;
     } else {
 //        sendData(par);

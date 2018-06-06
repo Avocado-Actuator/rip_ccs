@@ -18,6 +18,8 @@
 
 #include "utils/uartstdio.h"
 
+#include "crc.h"
+
 void CommsInit(uint32_t);
 void ConsoleInit(void);
 void ConsoleIntHandler(void);
@@ -27,8 +29,19 @@ void UARTSend(const uint8_t*, uint32_t);
 uint8_t UARTGetAddress(void);
 void UARTSetAddress(uint8_t);
 
-uint8_t recvIndex, STOP_BYTE, MAX_PAR_VAL, CMD_MASK, PAR_MASK;
 uint32_t uartSysClock;
+
+uint8_t recvIndex,
+        ESTOP_HOLD,
+        ESTOP_KILL,
+        COMMAND_SUCCESS,
+        COMMAND_FAILURE,
+        OUTPUT_LIMITING,
+        OUTPUT_FREE,
+        STOP_BYTE,
+        MAX_PAR_VAL,
+        CMD_MASK,
+        PAR_MASK;
 
 // data structures
 union Flyte {
