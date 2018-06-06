@@ -31,6 +31,7 @@ void CommsInit(uint32_t g_ui32SysClock){
     ROM_UARTIntEnable(UART7_BASE, UART_INT_RX | UART_INT_RT);
 
     recvIndex = 0;
+    MAX_PAR_VAL = 9;
     STOP_BYTE = '!';
 
     BRAIN_ADDR = 0x0;
@@ -68,6 +69,58 @@ void ConsoleInit(void) {
     ROM_UARTIntEnable(UART0_BASE, UART_INT_RX | UART_INT_RT);
     UARTprintf("Console initialized\n");
 }
+
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+// <<<<<<<<<<< UTILITIES >>>>>>>>>>
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+
+/**
+ * Returns string corresponding to given enum value.
+ *
+ * @param par - enum value whose name to return
+ * @return the name of the enum value given
+ */
+const char* getCommandName(enum Command cmd) {
+    switch(cmd) {
+        case Get: return "Get";
+        case Set: return "Set";
+        default: return "NOP";
+    }
+}
+
+/**
+ * Returns string corresponding to given enum value.
+ *
+ * @param par - enum value whose name to return
+ * @return the name of the enum value given
+ */
+const char* getParameterName(enum Parameter par) {
+    switch(par) {
+        case Pos: return "Pos";
+        case Vel: return "Vel";
+        case Cur: return "Cur";
+        case Tmp: return "Tmp";
+        case MaxCur: return "MaxCur"; // Max Current
+        case Status: return "Status"; // status register
+        case EStop: return "EStop"; // Emergency stop behavior, kill motor or hold position
+        case Adr: return "Adr";
+        default: return "NOP";
+    }
+}
+
+/**
+ * Get personal address
+ *
+ * @return our address
+ */
+uint8_t UARTGetAddress() { return ADDR; }
+
+/**
+ * Set personal address
+ *
+ * @param our new address
+ */
+void UARTSetAddress(uint8_t addr) { ADDR = addr; }
 
 // <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
 // <<<<<<< MESSAGE HANDLING >>>>>>>
@@ -115,6 +168,19 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
         return false;
     }
 
+    enum Command type = buffer[1] & CMD_MASK ? Set : Get;
+    if(verbose) UARTprintf("Command: %s\n", getCommandName(type));
+
+
+    enum Parameter par = buffer[1] & PAR_MASK;
+    if(par > MAX_PAR_VAL) {
+        if(verbose) UARTprintf("No parameter specified, abort");
+//        setStatus(COMMAND_FAILURE);
+        return true;
+    }
+
+    if(verbose) UARTprintf("Parameter: %s\n", getParameterName(par));
+
     return false;
 }
 
@@ -137,25 +203,6 @@ void UARTSend(const uint8_t *buffer, uint32_t length) {
         }
     }
 }
-
-// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
-// <<<<<<<<<<< UTILITIES >>>>>>>>>>
-// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
-
-/**
- * Get personal address
- *
- * @return our address
- */
-uint8_t UARTGetAddress() { return ADDR; }
-
-/**
- * Set personal address
- *
- * @param our new address
- */
-void UARTSetAddress(uint8_t addr) { ADDR = addr; }
-
 
 // <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
 // <<<<<<<<<<<< HANDLERS >>>>>>>>>>
