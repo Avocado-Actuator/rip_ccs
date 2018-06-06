@@ -1,5 +1,6 @@
 #include "comms.h"
 
+uint8_t ADDR, BRAIN_ADDR, BROADCAST_ADDR, ADDRSET_ADDR;
 uint8_t recv[10];
 
 // <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
@@ -31,6 +32,15 @@ void CommsInit(uint32_t g_ui32SysClock){
 
     recvIndex = 0;
     STOP_BYTE = '!';
+
+    BRAIN_ADDR = 0x0;
+    ADDR = 0x1;
+    BROADCAST_ADDR = 0xFF;
+    ADDRSET_ADDR = 0xFE;
+
+    CMD_MASK = 0b10000000; // 1 is SET and 0 is GET
+    PAR_MASK = 0b00000111; // gives just parameter selector bits
+
     UARTprintf("Communication initialized\n");
 }
 
@@ -76,7 +86,7 @@ void ConsoleInit(void) {
  */
 bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
     if(echo) {
-        UARTSend((uint8_t *) buffer, length);
+//        UARTSend((uint8_t *) buffer, length);
         int i;
         for (i = 0; i < length; ++i) {
 //            UARTprintf("Text[%d]: %c\n", i, buffer[i]);

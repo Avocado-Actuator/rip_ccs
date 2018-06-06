@@ -24,7 +24,29 @@ void ConsoleIntHandler(void);
 void UARTIntHandler(void);
 void UARTSend(const uint8_t*, uint32_t);
 
-uint8_t recvIndex, STOP_BYTE;
+uint8_t recvIndex, STOP_BYTE, MAX_PAR_VAL, CMD_MASK, PAR_MASK;
 uint32_t uartSysClock;
+
+// data structures
+union Flyte {
+  float f;
+  uint8_t bytes[sizeof(float)];
+};
+
+enum Command {
+    Get = 0,
+    Set = 1
+};
+
+enum Parameter {
+    Adr     = 0,
+    Tmp     = 1,
+    Cur     = 2,
+    Vel     = 3,
+    Pos     = 4,
+    MaxCur  = 5,
+    EStop   = 6,
+    Status  = 7
+};
 
 #endif /* COMMS_H_ */
