@@ -85,13 +85,33 @@ void ConsoleInit(void) {
  * @return if we successfully handled a message meant for us
  */
 bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
-    if(echo) {
-//        UARTSend((uint8_t *) buffer, length);
-        int i;
-        for (i = 0; i < length; ++i) {
+    int i;
+    for (i = 0; i < length; ++i) {
 //            UARTprintf("Text[%d]: %c\n", i, buffer[i]);
-            UARTprintf("%c", buffer[i]);
-        }
+        UARTprintf("%x", buffer[i]);
+    }
+    UARTprintf("\n");
+
+    if(echo) {
+        UARTSend((uint8_t *) buffer, length);
+        return false;
+    }
+
+    // get address
+    uint8_t tempaddr = buffer[0];
+    if(verbose) UARTprintf("Address: %x\n", tempaddr);
+
+    if(tempaddr == BROADCAST_ADDR){
+        //TODO: Handle heartbeat from brain
+        return false;
+    } else if (tempaddr == ADDRSET_ADDR){
+        //TODO: Handle address setting command
+//        setStatus(COMMAND_SUCCESS);
+        return true;
+    }
+
+    if(tempaddr != UARTGetAddress()) {
+        if(verbose) UARTprintf("Not my address, abort\n");
         return false;
     }
 
@@ -117,6 +137,25 @@ void UARTSend(const uint8_t *buffer, uint32_t length) {
         }
     }
 }
+
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+// <<<<<<<<<<< UTILITIES >>>>>>>>>>
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+
+/**
+ * Get personal address
+ *
+ * @return our address
+ */
+uint8_t UARTGetAddress() { return ADDR; }
+
+/**
+ * Set personal address
+ *
+ * @param our new address
+ */
+void UARTSetAddress(uint8_t addr) { ADDR = addr; }
+
 
 // <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
 // <<<<<<<<<<<< HANDLERS >>>>>>>>>>
@@ -160,7 +199,7 @@ void UARTIntHandler(void) {
     recv[recvIndex++] = character;
 
     if(character == STOP_BYTE) {
-        handleUART(recv, recvIndex, true, true);
+        handleUART(recv, recvIndex, true, false);
         recvIndex = 0;
     }
 
