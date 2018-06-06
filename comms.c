@@ -7,6 +7,11 @@ uint8_t recv[10];
 // <<<<<<<<<<<< INITS >>>>>>>>>>
 // <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
 
+/**
+ * Initializes UART7 for communication between boards
+ *
+ * @param g_ui32SysClock - system clock to sync with
+ */
 void CommsInit(uint32_t g_ui32SysClock){
     // Copy over the clock created in main
     uartSysClock = g_ui32SysClock;
@@ -45,9 +50,9 @@ void CommsInit(uint32_t g_ui32SysClock){
     UARTprintf("Communication initialized\n");
 }
 
-//*****************************************************************************
-// Initializes UART0 for console output using UARTStdio
-//*****************************************************************************
+/**
+ * Initializes UART0 for console output using UARTStdio
+ */
 void ConsoleInit(void) {
     // Enable GPIO port A which is used for UART0 pins.
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
@@ -122,6 +127,21 @@ uint8_t UARTGetAddress() { return ADDR; }
  */
 void UARTSetAddress(uint8_t addr) { ADDR = addr; }
 
+/**
+ * Prints given float
+ *
+ * @param val - float to print
+ * @param verbose - how descriptive to be in printing
+ */
+void UARTPrintFloat(float val, bool verbose) {
+    char str[100]; // pretty arbitrarily chosen
+    sprintf(str, "%f", val);
+    verbose
+        ? UARTprintf("val, length: %s, %d\n", str, strlen(str))
+        : UARTprintf("%s\n", str);
+}
+
+
 // <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
 // <<<<<<< MESSAGE HANDLING >>>>>>>
 // <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
@@ -181,6 +201,31 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
 
     if(verbose) UARTprintf("Parameter: %s\n", getParameterName(par));
 
+    if(type == Set) {
+        if (length < 5){
+            if(verbose) UARTprintf("No value provided, abort\n");
+//            setStatus(COMMAND_FAILURE);
+            return true;
+        }
+        // if the cmd is Set then the next entity is a value. This value is either a single float
+        // which takes the next four bytes of buffer, or a single byte
+        union Flyte setval;
+        int i;
+        for (i = 0; i < length - 3; i++){
+            UARTprintf("Byte %d: %x\n", i, buffer[i+2]);
+            setval.bytes[i] = buffer[i+2];
+        }
+        if(verbose) {
+            UARTprintf("Setting value\n");
+            UARTPrintFloat(setval.f, true);
+        }
+//        setData(par, &setval);
+        return true;
+    } else {
+//        sendData(par);
+        return false;
+    }
+
     return false;
 }
 
@@ -208,9 +253,9 @@ void UARTSend(const uint8_t *buffer, uint32_t length) {
 // <<<<<<<<<<<< HANDLERS >>>>>>>>>>
 // <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
 
-//*****************************************************************************
-// The console interrupt handler.
-//*****************************************************************************
+/**
+ * Console interrupt handler
+ */
 void ConsoleIntHandler(void) {
     // Get the interrupt status.
     uint32_t ui32Status = ROM_UARTIntStatus(UART0_BASE, true);
@@ -230,9 +275,9 @@ void ConsoleIntHandler(void) {
     }
 }
 
-//*****************************************************************************
-// The UART interrupt handler.
-//*****************************************************************************
+/**
+ * UART interrupt handler
+ */
 void UARTIntHandler(void) {
     // Get the interrrupt status.
     uint32_t ui32Status = ROM_UARTIntStatus(UART7_BASE, true);

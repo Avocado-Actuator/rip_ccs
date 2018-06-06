@@ -16,19 +16,21 @@
 
 #include "comms.h"
 
-// System clock rate in Hz.
+// system clock rate in Hz.
 uint32_t g_ui32SysClock;
 
-//*****************************************************************************
-// The error routine that is called if the driver library encounters an error.
-//*****************************************************************************
+/**
+ * Called if driver library encounters an error
+ */
 #ifdef DEBUG
-void
-__error__(char *pcFilename, uint32_t ui32Line)
-{
-}
+void __error__(char *pcFilename, uint32_t ui32Line) { }
 #endif
 
+/**
+ * Main loop
+ *
+ * @return doesn't really matter
+ */
 int main(void) {
     // Set the clocking to run directly from the crystal at 120MHz.
     g_ui32SysClock = MAP_SysCtlClockFreqSet(
