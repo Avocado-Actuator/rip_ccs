@@ -404,6 +404,15 @@ void sendData(enum Parameter par) {
  * @return if we successfully handled a message meant for us
  */
 bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
+    // get address
+    uint8_t tempaddr = buffer[0];
+
+    if(tempaddr == BROADCAST_ADDR) {
+//        UARTprintf("Resetting heartbeat time\n");
+        HEARTBEAT_TIME = 0;
+        return false;
+    }
+
     if(verbose) {
         UARTprintf("\nNew message:\n");
         int i;
@@ -423,21 +432,12 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
         return false;
     }
 
-    // get address
-    uint8_t tempaddr = buffer[0];
-    if(verbose) UARTprintf("Address: %x\n", tempaddr);
-
-    if(tempaddr == BROADCAST_ADDR){
-        //TODO: Handle heartbeat from brain
-        return false;
-    } else if (tempaddr == ADDRSET_ADDR){
+    if (tempaddr == ADDRSET_ADDR) {
         setAddress(buffer[1]);
         if(verbose) UARTprintf("Set address to %x\n", getAddress());
         setStatus(COMMAND_SUCCESS);
         return true;
-    }
-
-    if(tempaddr != getAddress()) {
+    } else if(tempaddr != getAddress()) {
         if(verbose) UARTprintf("Not my address, abort\n");
         return false;
     }
