@@ -43,16 +43,31 @@ int main(void) {
 
     ConsoleInit();
     CommsInit(g_ui32SysClock);
+    TimerInit();
     UARTprintf("Initialization done.\n");
 
-//    int counter = 0;
-//    int iter_mod = 100000000;
+    uint8_t buf[8];
+    uint8_t addr = 0x1;
+    uint8_t msg = 0b00000001;
+    buf[0] = addr;
+    buf[1] = msg;
+
+
+//    union Flyte val;
+//    val.f = 11.0;
+//    int i;
+//    for (i = 0; i < 4; i++){
+//        buf[i+2] = val.bytes[i];
+//        UARTprintf("float byte %d: %x\n", i, val.bytes[i]);
+//    }
+    int counter = 0;
+    int iter_mod = 10'000'000;
     // Loop forever echoing data through the UART.
     while(1) {
-//        if(counter % iter_mod == 0) {
-//            UARTprintf("\nIteration %d\n", counter);
-//        }
-//
-//        ++counter;
+        if(counter % iter_mod == 0) {
+              UARTprintf("Sending\n");
+              UARTSend(buf, 2);
+        }
+        ++counter;
     }
 }

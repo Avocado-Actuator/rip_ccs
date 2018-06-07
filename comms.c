@@ -3,6 +3,56 @@
 uint8_t ADDR, BRAIN_ADDR, BROADCAST_ADDR, ADDRSET_ADDR;
 uint8_t recv[10];
 
+uint8_t buffer_time_flag;
+uint32_t TIME, BUFFER_TIME, HEARTBEAT_TIME;
+
+uint32_t heartbeat_counter = 0;
+
+// <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
+// <<<<<<<<<<<< TIMER >>>>>>>>>>
+// <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
+void Timer0IntHandler(void) {
+    // Clear the timer interrupt.
+    ROM_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+    // Update the interrupt status.
+    ++TIME;
+
+    // island time except for heartbeats
+    ++HEARTBEAT_TIME;
+    // send heartbeat every 100 ms, twice as fast as they're expected
+    if(HEARTBEAT_TIME % 10'000 == 0) {
+        heartbeat_counter++;
+        heartbeat();
+    }
+
+    // island time except for a buffer
+    ++BUFFER_TIME;
+    // 200 chosen arbitrarily
+    if(BUFFER_TIME % 200 == 0) { buffer_time_flag = 1; }
+}
+
+void TimerInit(void) {
+    /************** Initialization for timer (1ms)  *****************/
+    //Enable the timer peripherals
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+    // Configure 32-bit periodic timers.
+    //1ms timer
+    ROM_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
+    ROM_TimerLoadSet(TIMER0_BASE, TIMER_A, uartSysClock/100000);//was 1000, trigger every 1ms, 1000Hz
+    // Setup the interrupts for the timer timeouts.
+    ROM_IntEnable(INT_TIMER0A);
+    ROM_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+    // Enable the timers.
+    ROM_TimerEnable(TIMER0_BASE, TIMER_A);
+
+    TIME = 0;
+    BUFFER_TIME = 0;
+    HEARTBEAT_TIME = 0;
+
+    buffer_time_flag = 0;
+    UARTprintf("Communication initialized\n");
+}
+
 // <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
 // <<<<<<<<<<<< INITS >>>>>>>>>>
 // <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
@@ -69,6 +119,27 @@ void ConsoleInit(void) {
     UARTprintf("Console initialized\n");
 }
 
+
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+// <<<<<<<<<< UTILITIES >>>>>>>>>>>
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+
+
+/**
+ * Prints given float
+ *
+ * @param val - float to print
+ * @param verbose - how descriptive to be in printing
+ */
+void UARTPrintFloat(float val, bool verbose) {
+    char str[100]; // pretty arbitrarily chosen
+    sprintf(str, "%f", val);
+    verbose
+        ? UARTprintf("val, length: %s, %d\n", str, strlen(str))
+        : UARTprintf("%s\n", str);
+}
+
+
 // <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
 // <<<<<<< MESSAGE HANDLING >>>>>>>
 // <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
@@ -88,9 +159,21 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
     if(echo) {
 //        UARTSend((uint8_t *) buffer, length);
         int i;
-        for (i = 0; i < length; ++i) {
-//            UARTprintf("Text[%d]: %c\n", i, buffer[i]);
-            UARTprintf("%c", buffer[i]);
+        UARTprintf("Address: %x\n", buffer[0]);
+        if (length == 4) {
+            UARTprintf("Value: %x\n", buffer[1]);
+        } else if (length == 7) {
+            union Flyte val;
+            for (i = 0; i < 4; i++){
+                val.bytes[i] = buffer[i+1];
+            }
+            UARTprintf("Value: ");
+            UARTPrintFloat(val.f, false);
+        } else {
+            UARTprintf("Message:\n");
+            for (i = 0; i < length; i++){
+                UARTprintf("[%d]: %x\n", i, buffer[i]);
+            }
         }
         return false;
     }
@@ -105,6 +188,9 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
  * @param length - the length of the message
  */
 void UARTSend(const uint8_t *buffer, uint32_t length) {
+    ROM_TimerIntDisable(TIMER0_BASE, TIMER_TIMA_TIMEOUT); // So we can't be interrupted by the heartbeat trying to send
+    // Add CRC byte to message
+    uint8_t crc = crc8(0, (const unsigned char*) buffer, length);
     bool space;
     int i;
     for (i = 0; i < length; i++) {
@@ -116,6 +202,18 @@ void UARTSend(const uint8_t *buffer, uint32_t length) {
             space = ROM_UARTCharPutNonBlocking(UART7_BASE, buffer[i]);
         }
     }
+    space = ROM_UARTCharPutNonBlocking(UART7_BASE, crc);
+    // if send FIFO is full, wait until we can put the char in
+    while (!space) {
+        space = ROM_UARTCharPutNonBlocking(UART7_BASE, crc);
+    }
+    space = ROM_UARTCharPutNonBlocking(UART7_BASE, STOP_BYTE);
+    // if send FIFO is full, wait until we can put the char in
+    while (!space) {
+        space = ROM_UARTCharPutNonBlocking(UART7_BASE, STOP_BYTE);
+    }
+
+    ROM_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
 }
 
 // <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
@@ -158,6 +256,7 @@ void UARTIntHandler(void) {
     // Read the next character from the UART and write it back to the UART.
     uint8_t character = ROM_UARTCharGetNonBlocking(UART7_BASE);
     recv[recvIndex++] = character;
+//    UARTprintf("Byte: %x\n", character);
 
     if(character == STOP_BYTE) {
         handleUART(recv, recvIndex, true, true);
@@ -173,3 +272,13 @@ void UARTIntHandler(void) {
     GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
 //    }
 }
+
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+// <<<<<<<<<<< C LIBRARY >>>>>>>>>>
+// <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+
+
+/**
+ * Send empty message on address BROADCAST_ADDR so avocados know to keep working.
+ */
+void heartbeat() { UARTSend((uint8_t[]) { BROADCAST_ADDR }, 1); }

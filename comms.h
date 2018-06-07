@@ -17,12 +17,44 @@
 #include "driverlib/rom_map.h"
 
 #include "utils/uartstdio.h"
+#include "crc.h"
+#include "driverlib/timer.h"
 
 void CommsInit(uint32_t);
 void ConsoleInit(void);
 void ConsoleIntHandler(void);
 void UARTIntHandler(void);
 void UARTSend(const uint8_t*, uint32_t);
+void TimerInit(void);
+
+// C Library Functions
+
+void heartbeat(void);
+
+// <<<< set >>>>
+
+// logistics
+void setAddress(uint8_t);
+void setMaxCurrent(uint8_t, float);
+void setEStopBehavior(uint8_t, uint8_t);
+
+// movement
+void rotateToPosition(uint8_t, float);
+void rotateAtVelocity(uint8_t, float);
+void rotateAtCurrent(uint8_t, float);
+
+// <<<< get >>>>
+
+// logistics
+void getStatus(uint8_t);
+void getMaxCurrent(uint8_t);
+void getStopBehavior(uint8_t);
+
+// sensors
+void getPosition(uint8_t);
+void getVelocity(uint8_t);
+void getCurrent(uint8_t);
+void getTemperature(uint8_t);
 
 uint8_t recvIndex, STOP_BYTE, MAX_PAR_VAL, CMD_MASK, PAR_MASK;
 uint32_t uartSysClock;
