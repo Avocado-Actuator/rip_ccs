@@ -302,7 +302,6 @@ void setData(enum Parameter par, union Flyte * value, bool verbose) {
  * @param par - parameter to send
  */
 void sendData(enum Parameter par) {
-    UARTprintf("\nin sendData\n");
     union Flyte value;
     switch(par) {
 //        case Pos: {
@@ -333,9 +332,7 @@ void sendData(enum Parameter par) {
 //            UARTPrintFloat(getTemp(), false);
 //            value.f = getTemp();
             value.f = 123.987;
-            UARTprintf("getStatus() before = %x\n", getStatus());
             setStatus(COMMAND_SUCCESS);
-            UARTprintf("getStatus() after = %x\n", getStatus());
             break;
         }
 
@@ -376,12 +373,11 @@ void sendData(enum Parameter par) {
         }
     }
     if (!(getStatus() & ~COMMAND_FAILURE)){ // true if command failed
-        UARTprintf("Get failed :(\n");
-        UARTprintf("getStatus() = %x\n", getStatus());
+//        UARTprintf("Get failed :(\n");
         uint8_t temp = getStatus();
         UARTSend(&temp, 1);
     } else {
-        UARTprintf("Get succeeded! :)\n");
+//        UARTprintf("Get succeeded! :)\n");
         UARTPrintFloat(value.f, true);
         UARTSend(value.bytes, 4);
     }
@@ -417,14 +413,14 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
         UARTprintf("\nNew message:\n");
         int i;
         for (i = 0; i < length; ++i) {
-    //            UARTprintf("Text[%d]: %c\n", i, buffer[i]);
-            UARTprintf("Byte %d: %x", i, buffer[i]);
+            UARTprintf("Byte %d: %x\n", i, buffer[i]);
         }
         UARTprintf("\n");
     }
 
+    if(verbose) UARTprintf("Address: %x\n", tempaddr);
+
     uint8_t crcin = recv[length-2];
-    if(verbose) UARTprintf("CRC byte: %d\n", crcin);
     if (crc8(0, (uint8_t *)recv, length-2) != crcin){
         // ********** ERROR ***********
         // Handle corrupted message
@@ -488,7 +484,7 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
  * @param length - the length of the message
  */
 void UARTSend(const uint8_t *buffer, uint32_t length) {
-    UARTprintf("In UARTSend, message:\n");
+//    UARTprintf("In UARTSend, message:\n");
     uint8_t msg[8];
     msg[0] = BRAIN_ADDR;
     int i, len;
@@ -502,9 +498,9 @@ void UARTSend(const uint8_t *buffer, uint32_t length) {
     msg[len++] = crc;
     msg[len++] = STOP_BYTE;
 
-    for(i = 0; i < len; i++) {
-        UARTprintf("Byte %d: %x\n", i, msg[i]);
-    }
+//    for(i = 0; i < len; i++) {
+//        UARTprintf("Byte %d: %x\n", i, msg[i]);
+//    }
 
     bool space;
     for (i = 0; i < len; i++) {
