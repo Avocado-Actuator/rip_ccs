@@ -346,16 +346,32 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
  * @param length - the length of the message
  */
 void UARTSend(const uint8_t *buffer, uint32_t length) {
+    UARTprintf("In UARTSend, message:\n");
+    uint8_t msg[8];
+    msg[0] = BRAIN_ADDR;
+    int i, len;
+    len = 1;
+    for (i = 0; i < length; i++){
+        msg[i+1] = buffer[i];
+        len++;
+    }
+    // Add CRC byte to message
+    uint8_t crc = crc8(0, (const unsigned char*) &msg, len);
+    msg[len++] = crc;
+    msg[len++] = STOP_BYTE;
+
+    for(i = 0; i < len; i++) {
+        UARTprintf("Byte %d: %x\n", i, msg[i]);
+    }
+
     bool space;
-    int i;
-    for (i = 0; i < length; i++) {
+    for (i = 0; i < len; i++) {
         // write the next character to the UART.
         // putchar returns false if the send FIFO is full
-        space = ROM_UARTCharPutNonBlocking(UART7_BASE, buffer[i]);
+        space = ROM_UARTCharPutNonBlocking(UART7_BASE, msg[i]);
         // if send FIFO is full, wait until we can put the char in
-        while (!space) {
-            space = ROM_UARTCharPutNonBlocking(UART7_BASE, buffer[i]);
-        }
+        while (!space)
+            space = ROM_UARTCharPutNonBlocking(UART7_BASE, msg[i]);
     }
 }
 
