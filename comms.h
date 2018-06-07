@@ -15,6 +15,7 @@
 #include "inc/hw_ints.h"
 #include "driverlib/rom.h"
 #include "driverlib/rom_map.h"
+#include "driverlib/timer.h"
 
 #include "utils/uartstdio.h"
 
@@ -22,8 +23,10 @@
 
 void CommsInit(uint32_t);
 void ConsoleInit(void);
+void TimerInit(void);
 void ConsoleIntHandler(void);
 void UARTIntHandler(void);
+void Timer0IntHandler(void);
 void UARTSend(const uint8_t*, uint32_t);
 
 uint8_t getAddress(void);

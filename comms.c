@@ -3,6 +3,56 @@
 uint8_t ADDR, BRAIN_ADDR, BROADCAST_ADDR, ADDRSET_ADDR;
 uint8_t recv[10];
 
+uint8_t buffer_time_flag;
+uint32_t TIME, BUFFER_TIME, HEARTBEAT_TIME;
+uint32_t panic_counter;
+
+// <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
+// <<<<<<<<<<<< TIMER >>>>>>>>>>
+// <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
+void Timer0IntHandler(void) {
+    // Clear the timer interrupt.
+    ROM_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+    // Update the interrupt status.
+    ++TIME;
+
+    // island time except for heartbeats
+    ++HEARTBEAT_TIME;
+    // expect heartbeat every 200 ms
+    // user should send multiple in that time in case of corruption
+    if(HEARTBEAT_TIME % 20'000 == 0) {
+        UARTprintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n%d PANIC ESTOP, NO HEARTBEAT\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", panic_counter++);
+    }
+
+    // island time except for a buffer
+    ++BUFFER_TIME;
+    // 200 chosen arbitrarily
+    if(BUFFER_TIME % 200) { buffer_time_flag = 1; }
+}
+
+void TimerInit(void) {
+    /************** Initialization for timer (1ms)  *****************/
+    //Enable the timer peripherals
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+    // Configure 32-bit periodic timers.
+    //1ms timer
+    ROM_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
+    ROM_TimerLoadSet(TIMER0_BASE, TIMER_A, uartSysClock/100000);//was 1000, trigger every 1ms, 1000Hz
+    // Setup the interrupts for the timer timeouts.
+    ROM_IntEnable(INT_TIMER0A);
+    ROM_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+    // Enable the timers.
+    ROM_TimerEnable(TIMER0_BASE, TIMER_A);
+
+    TIME = 0;
+    BUFFER_TIME = 0;
+    HEARTBEAT_TIME = 0;
+
+    buffer_time_flag = 0;
+    UARTprintf("Communication initialized\n");
+}
+
+
 // <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
 // <<<<<<<<<<<< INITS >>>>>>>>>>
 // <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
