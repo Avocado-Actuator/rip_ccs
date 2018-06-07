@@ -126,14 +126,14 @@ const char* getParameterName(enum Parameter par) {
  *
  * @return our address
  */
-uint8_t UARTGetAddress() { return ADDR; }
+uint8_t getAddress() { return ADDR; }
 
 /**
  * Set personal address
  *
  * @param our new address
  */
-void UARTSetAddress(uint8_t addr) { ADDR = addr; }
+void setAddress(uint8_t addr) { ADDR = addr; }
 
 /**
  * Prints given float
@@ -185,9 +185,9 @@ void setData(enum Parameter par, union Flyte * value) {
             break;
         }
         case Adr: {
-            UARTSetAddress(value->bytes[0]);
+            setAddress(value->bytes[0]);
 //            UARTprintf("New value: ");
-//            uint8_t temp = UARTGetAddress();
+//            uint8_t temp = getAddress();
 //            UARTprintf((const char*) &temp, false);
             setStatus(COMMAND_SUCCESS);
             break;
@@ -264,12 +264,13 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
         //TODO: Handle heartbeat from brain
         return false;
     } else if (tempaddr == ADDRSET_ADDR){
-        //TODO: Handle address setting command
-//        setStatus(COMMAND_SUCCESS);
+        setAddress(buffer[1]);
+        if(verbose) UARTprintf("Set address to %x\n", getAddress());
+        setStatus(COMMAND_SUCCESS);
         return true;
     }
 
-    if(tempaddr != UARTGetAddress()) {
+    if(tempaddr != getAddress()) {
         if(verbose) UARTprintf("Not my address, abort\n");
         return false;
     }
@@ -311,8 +312,6 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
 //        sendData(par);
         return false;
     }
-
-    return false;
 }
 
 /**

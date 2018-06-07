@@ -26,8 +26,8 @@ void ConsoleIntHandler(void);
 void UARTIntHandler(void);
 void UARTSend(const uint8_t*, uint32_t);
 
-uint8_t UARTGetAddress(void);
-void UARTSetAddress(uint8_t);
+uint8_t getAddress(void);
+void setAddress(uint8_t);
 
 uint32_t uartSysClock;
 
