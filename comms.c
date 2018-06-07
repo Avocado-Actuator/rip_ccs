@@ -158,67 +158,79 @@ void UARTPrintFloat(float val, bool verbose) {
  *
  * @param par - parameter to set
  * @param value - value to set parameter to
+ * @param verbose - if true print to console for debugging
  */
-void setData(enum Parameter par, union Flyte * value) {
+void setData(enum Parameter par, union Flyte * value, bool verbose) {
     UARTprintf("\nin setData\n");
     UARTprintf("Target value: %d\n", value->f);
     switch(par) {
         case Pos: {
 //            setTargetAngle(value->f);
-//            UARTprintf("New value: ");
-//            UARTPrintFloat(getTargetAngle(), false);
+            if(verbose) {
+                UARTprintf("New target angle: ");
+//                UARTPrintFloat(getTargetAngle(), false);
+            }
             setStatus(COMMAND_SUCCESS);
             break;
         }
         case Vel: {
 //            setTargetVelocity(value->f);
-//            UARTprintf("New value: ");
-//            UARTPrintFloat(getTargetVelocity(), false);
+            if(verbose) {
+                UARTprintf("New target velocity: ");
+//                UARTPrintFloat(getTargetVelocity(), false);
+            }
             setStatus(COMMAND_SUCCESS);
             break;
         }
         case Cur: {
 //            setTargetCurrent(value->f);
-//            UARTprintf("New value: ");
-//            UARTPrintFloat(getTargetCurrent(), false);
-//            setStatus(COMMAND_SUCCESS);
+            if(verbose) {
+                UARTprintf("New target current: ");
+//                UARTPrintFloat(getTargetCurrent(), false);
+            }
+            setStatus(COMMAND_SUCCESS);
             break;
         }
         case Adr: {
             setAddress(value->bytes[0]);
-//            UARTprintf("New value: ");
-//            uint8_t temp = getAddress();
-//            UARTprintf((const char*) &temp, false);
+            if(verbose) {
+                UARTprintf("New address: ");
+                uint8_t temp = getAddress();
+                UARTprintf((const char*) &temp, false);
+            }
             setStatus(COMMAND_SUCCESS);
             break;
         }
         case MaxCur: {
 //            setMaxCurrent(value->f);
-//            UARTprintf("New value: ");
-//            UARTPrintFloat(getMaxCurrent(), false);
+            if(verbose) {
+                UARTprintf("New max current: ");
+//                UARTPrintFloat(getMaxCurrent(), false);
+            }
             setStatus(COMMAND_SUCCESS);
             break;
         }
         case EStop: {
 //            setEStop(value->bytes[0]);
-            UARTprintf("New value: %x\n", value->bytes[0]);
-//            uint8_t temp = getEStop();
-//            UARTprintf((const char*) &temp, false);
+            if(verbose) {
+                UARTprintf("New estop behavior: %x\n", value->bytes[0]);
+//                uint8_t temp = getEStop();
+//                UARTprintf((const char*) &temp, false);
+            }
             setStatus(COMMAND_SUCCESS);
             break;
         }
         case Tmp: {
-            UARTprintf("Invalid set, user tried to set temperature\n");
+            if(verbose) UARTprintf("Invalid set, user tried to set temperature\n");
             setStatus(COMMAND_FAILURE);
             break;
         }
         default: {
-            UARTprintf("Tried to set invaliad parameter, aborting\n");
+            if(verbose) UARTprintf("Tried to set invaliad parameter, aborting\n");
             setStatus(COMMAND_FAILURE);
             break;
         }
     }
-    return;
 }
 
 // <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
@@ -306,7 +318,7 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
             UARTprintf("Setting value\n");
             UARTPrintFloat(setval.f, true);
         }
-        setData(par, &setval);
+        setData(par, &setval, verbose);
         return true;
     } else {
 //        sendData(par);
