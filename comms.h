@@ -41,7 +41,8 @@ uint8_t recvIndex,
         STOP_BYTE,
         MAX_PAR_VAL,
         CMD_MASK,
-        PAR_MASK;
+        PAR_MASK,
+        STATUS;
 
 // data structures
 union Flyte {

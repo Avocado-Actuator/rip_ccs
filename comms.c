@@ -47,6 +47,18 @@ void CommsInit(uint32_t g_ui32SysClock){
     CMD_MASK = 0b10000000; // 1 is SET and 0 is GET
     PAR_MASK = 0b00000111; // gives just parameter selector bits
 
+    // matching flags should be inverse
+    ESTOP_HOLD      = 0b00000001;
+    ESTOP_KILL      = 0b11111110;
+
+    COMMAND_SUCCESS = 0b00000010;
+    COMMAND_FAILURE = 0b11111101;
+
+    OUTPUT_LIMITING = 0b00000100;
+    OUTPUT_FREE     = 0b11111011;
+
+    STATUS          = 0b00000000;
+
     UARTprintf("Communication initialized\n");
 }
 
@@ -84,8 +96,9 @@ void ConsoleInit(void) {
  *
  * @param newflag - new status flag
  */
-uint8_t STATUS;
-void setStatus(uint8_t newflag) { STATUS &= newflag; }
+void setStatus(uint8_t newflag) { STATUS |= newflag; }
+void clearStatus(uint8_t newflag) { STATUS &= newflag; }
+uint8_t getStatus() { return STATUS; }
 
 /**
  * Returns string corresponding to given enum value.
@@ -222,12 +235,12 @@ void setData(enum Parameter par, union Flyte * value, bool verbose) {
         }
         case Tmp: {
             if(verbose) UARTprintf("Invalid set, user tried to set temperature\n");
-            setStatus(COMMAND_FAILURE);
+            clearStatus(COMMAND_FAILURE);
             break;
         }
         default: {
             if(verbose) UARTprintf("Tried to set invaliad parameter, aborting\n");
-            setStatus(COMMAND_FAILURE);
+            clearStatus(COMMAND_FAILURE);
             break;
         }
     }
@@ -294,7 +307,7 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
     enum Parameter par = buffer[1] & PAR_MASK;
     if(par > MAX_PAR_VAL) {
         if(verbose) UARTprintf("No parameter specified, abort");
-//        setStatus(COMMAND_FAILURE);
+//        clearStatus(COMMAND_FAILURE);
         return true;
     }
 
@@ -303,7 +316,7 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
     if(type == Set) {
         if (length < 5){
             if(verbose) UARTprintf("No value provided, abort\n");
-//            setStatus(COMMAND_FAILURE);
+//            clearStatus(COMMAND_FAILURE);
             return true;
         }
 
