@@ -3,8 +3,7 @@
 uint8_t ADDR, BRAIN_ADDR, BROADCAST_ADDR, ADDRSET_ADDR;
 uint8_t recv[10];
 
-uint8_t buffer_time_flag;
-uint32_t TIME, BUFFER_TIME, HEARTBEAT_TIME;
+uint32_t TIME, HEARTBEAT_TIME;
 uint32_t panic_counter;
 
 // <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
@@ -23,11 +22,6 @@ void Timer0IntHandler(void) {
     if(HEARTBEAT_TIME % 20'000 == 0) {
         UARTprintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n%d PANIC ESTOP, NO HEARTBEAT\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", panic_counter++);
     }
-
-    // island time except for a buffer
-    ++BUFFER_TIME;
-    // 200 chosen arbitrarily
-    if(BUFFER_TIME % 200) { buffer_time_flag = 1; }
 }
 
 void TimerInit(void) {
@@ -45,10 +39,8 @@ void TimerInit(void) {
     ROM_TimerEnable(TIMER0_BASE, TIMER_A);
 
     TIME = 0;
-    BUFFER_TIME = 0;
     HEARTBEAT_TIME = 0;
 
-    buffer_time_flag = 0;
     UARTprintf("Communication initialized\n");
 }
 
