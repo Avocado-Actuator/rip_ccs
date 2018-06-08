@@ -26,6 +26,7 @@ void ConsoleIntHandler(void);
 void UARTIntHandler(void);
 void UARTSend(const uint8_t*, uint32_t);
 void TimerInit(void);
+void UARTPrintFloat(float, bool);
 
 // C Library Functions
 

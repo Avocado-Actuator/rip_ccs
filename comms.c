@@ -17,17 +17,17 @@ void Timer0IntHandler(void) {
     ROM_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
     // Update the interrupt status.
     ++TIME;
-    // Send a message every 50ms
-    if (TIME % 200 == 0){
-        sendMsgFlag = 1;
-    }
+    // Send a message every 200ms
+//    if (TIME % 1000 == 0){
+//        sendMsgFlag = 1;
+//    }
     // island time except for heartbeats
     ++HEARTBEAT_TIME;
-    // send heartbeat every 250 ms, twice as fast as they're expected
-    if(HEARTBEAT_TIME % 300 == 0) {
-        heartbeat_counter++;
-        heartbeat();
-    }
+    // send heartbeat every 300 ms, twice as fast as they're expected
+//    if(HEARTBEAT_TIME % 300 == 0) {
+//        heartbeat_counter++;
+//        heartbeat();
+//    }
 }
 
 void TimerInit(void) {
