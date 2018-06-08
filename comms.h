@@ -56,8 +56,8 @@ void getVelocity(uint8_t);
 void getCurrent(uint8_t);
 void getTemperature(uint8_t);
 
-uint8_t recvIndex, STOP_BYTE, MAX_PAR_VAL, CMD_MASK, PAR_MASK;
-uint32_t uartSysClock;
+uint8_t msgID, recvIndex, STOP_BYTE, MAX_PAR_VAL, CMD_MASK, PAR_MASK;
+uint32_t uartSysClock, sendMsgFlag;
 
 // data structures
 union Flyte {

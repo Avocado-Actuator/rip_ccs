@@ -48,25 +48,26 @@ int main(void) {
 
     uint8_t buf[8];
     uint8_t addr = 0x1;
-    uint8_t msg = 0b00000001;
+    uint8_t msg = 0b10000010;
     buf[0] = addr;
     buf[1] = msg;
-
-
-//    union Flyte val;
-//    val.f = 11.0;
-//    int i;
-//    for (i = 0; i < 4; i++){
-//        buf[i+2] = val.bytes[i];
+    union Flyte val;
+    val.f = 11.0;
+    int i;
+    for (i = 0; i < 4; i++){
+        buf[i+2] = val.bytes[i];
 //        UARTprintf("float byte %d: %x\n", i, val.bytes[i]);
-//    }
+    }
+
+
     int counter = 0;
-    int iter_mod = 10'000'000;
+    int iter_mod = 500'000;
     // Loop forever echoing data through the UART.
     while(1) {
-        if(counter % iter_mod == 0) {
-              UARTprintf("Sending\n");
-              UARTSend(buf, 2);
+        if(sendMsgFlag == 1) {
+            sendMsgFlag = 0;
+            UARTprintf("Sending\n");
+            UARTSend(buf, 6);
         }
         ++counter;
     }
