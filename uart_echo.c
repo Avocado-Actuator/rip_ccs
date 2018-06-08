@@ -56,12 +56,8 @@ int main(void) {
     int i;
     for (i = 0; i < 4; i++){
         buf[i+2] = val.bytes[i];
-//        UARTprintf("float byte %d: %x\n", i, val.bytes[i]);
     }
 
-
-    int counter = 0;
-    int iter_mod = 500'000;
     // Loop forever echoing data through the UART.
     while(1) {
         if(sendMsgFlag == 1) {
@@ -69,6 +65,5 @@ int main(void) {
             UARTprintf("Sending\n");
             UARTSend(buf, 6);
         }
-        ++counter;
     }
 }

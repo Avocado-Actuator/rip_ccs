@@ -16,13 +16,13 @@ void Timer0IntHandler(void) {
     // Update the interrupt status.
     ++TIME;
     // Send a message every 50ms
-    if (TIME % 50 == 0){
+    if (TIME % 200 == 0){
         sendMsgFlag = 1;
     }
     // island time except for heartbeats
     ++HEARTBEAT_TIME;
-    // send heartbeat every 500 ms, twice as fast as they're expected
-    if(HEARTBEAT_TIME % 200 == 0) {
+    // send heartbeat every 250 ms, twice as fast as they're expected
+    if(HEARTBEAT_TIME % 250 == 0) {
         heartbeat_counter++;
         heartbeat();
     }
@@ -303,8 +303,8 @@ void heartbeat() { UARTSend((uint8_t[]) { BROADCAST_ADDR }, 1); /*UARTprintf("%d
  */
 void sendGet(uint8_t addr, uint8_t pParMask) {
     // since get is 0 in msb of pParMask no need to do anything
-    uint8_t msg[2] = { addr, pParMask };
-    UARTSend(msg, 2);
+    uint8_t msg[3] = { addr, msgID++, pParMask };
+    UARTSend(msg, 3);
 }
 
 /**
