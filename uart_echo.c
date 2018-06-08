@@ -45,25 +45,40 @@ int main(void) {
     CommsInit(g_ui32SysClock);
     TimerInit();
     UARTprintf("Initialization done.\n");
-
-    uint8_t buf[8];
     uint8_t addr = 0x1;
-    uint8_t msg = 0b10000010;
-    buf[0] = addr;
-    buf[1] = msg;
-    union Flyte val;
-    val.f = 11.0;
-    int i;
-    for (i = 0; i < 4; i++){
-        buf[i+2] = val.bytes[i];
-    }
-
+    uint8_t newID = 0;
+//    UARTprintf("\nSet Address **********\n\n");
+//    newID = setAddress(addr);
+//    UARTprintf("\nSet EStopBehavior **********\n\n");
+//    newID = setEStopBehavior(addr, 0x1);
+//    UARTprintf("\nSet MaxCurrent **********\n\n");
+//    newID = setMaxCurrent(addr, 11.1);
+//    UARTprintf("\nGet Status **********\n\n");
+//    newID = getStatus(addr);
+//    UARTprintf("\nGet MaxCurrent **********\n\n");
+//    newID = getMaxCurrent(addr);
+//    UARTprintf("\nGet EStopBehavior **********\n\n");
+//    newID = getStopBehavior(addr);
+//    UARTprintf("\nGet Position **********\n\n");
+//    newID = getPosition(addr);
+//    UARTprintf("\nGet Velocity **********\n\n");
+//    newID = getVelocity(addr);
+//    UARTprintf("\nGetCurrent **********\n\n");
+//    newID = getCurrent(addr);
+//    UARTprintf("\nGet Temp **********\n\n");
+//    newID = getTemperature(addr);
+//    UARTprintf("\nRotate Position **********\n\n");
+//    newID = rotateToPosition(addr, 11.1);
+//    UARTprintf("\nRotate Velocity **********\n\n");
+//    newID = rotateAtVelocity(addr, 11.1);
+//    UARTprintf("\nRotate Current **********\n\n");
+//    newID = rotateAtCurrent(addr, 11.1);
     // Loop forever echoing data through the UART.
     while(1) {
-        if(sendMsgFlag == 1) {
-            sendMsgFlag = 0;
-            UARTprintf("Sending\n");
-            UARTSend(buf, 6);
-        }
+//        if(sendMsgFlag == 1) {
+//            sendMsgFlag = 0;
+//            newID = getTemperature(addr);
+////            UARTprintf("Sent message ID: %d\n", newID);
+//        }
     }
 }

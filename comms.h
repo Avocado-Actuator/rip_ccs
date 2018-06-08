@@ -34,36 +34,43 @@ void heartbeat(void);
 // <<<< set >>>>
 
 // logistics
-void setAddress(uint8_t);
-void setMaxCurrent(uint8_t, float);
-void setEStopBehavior(uint8_t, uint8_t);
+uint8_t setAddress(uint8_t);
+uint8_t setMaxCurrent(uint8_t, float);
+uint8_t setEStopBehavior(uint8_t, uint8_t);
 
 // movement
-void rotateToPosition(uint8_t, float);
-void rotateAtVelocity(uint8_t, float);
-void rotateAtCurrent(uint8_t, float);
+uint8_t rotateToPosition(uint8_t, float);
+uint8_t rotateAtVelocity(uint8_t, float);
+uint8_t rotateAtCurrent(uint8_t, float);
 
 // <<<< get >>>>
 
 // logistics
-void getStatus(uint8_t);
-void getMaxCurrent(uint8_t);
-void getStopBehavior(uint8_t);
+uint8_t getStatus(uint8_t);
+uint8_t getMaxCurrent(uint8_t);
+uint8_t getStopBehavior(uint8_t);
 
 // sensors
-void getPosition(uint8_t);
-void getVelocity(uint8_t);
-void getCurrent(uint8_t);
-void getTemperature(uint8_t);
+uint8_t getPosition(uint8_t);
+uint8_t getVelocity(uint8_t);
+uint8_t getCurrent(uint8_t);
+uint8_t getTemperature(uint8_t);
 
-uint8_t msgID, recvIndex, STOP_BYTE, MAX_PAR_VAL, CMD_MASK, PAR_MASK;
-uint32_t uartSysClock, sendMsgFlag;
+uint8_t sendMsgFlag, recvIndex, STOP_BYTE, MAX_PAR_VAL, CMD_MASK, PAR_MASK;
+uint32_t uartSysClock, response_index;
 
 // data structures
 union Flyte {
   float f;
   uint8_t bytes[sizeof(float)];
 };
+
+//struct Response {
+//    uint8_t ID;
+//    union Flyte Value;
+//};
+
+union Flyte response_buffer[256];
 
 enum Command {
     Get = 0,
