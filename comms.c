@@ -24,7 +24,7 @@ void Timer0IntHandler(void) {
     // island time except for heartbeats
     ++HEARTBEAT_TIME;
     // send heartbeat every 250 ms, twice as fast as they're expected
-    if(HEARTBEAT_TIME % 250 == 0) {
+    if(HEARTBEAT_TIME % 300 == 0) {
         heartbeat_counter++;
         heartbeat();
     }
@@ -226,7 +226,7 @@ void UARTSend(const uint8_t *buffer, uint32_t length) {
     // Add CRC byte to message
     uint8_t crc = crc8(0, (const unsigned char*) buffer, length);
     UARTprintf("%x ", crc);
-    UARTprintf("!\n");
+    UARTprintf("%x\n", '!');
     bool space;
 //    int i;
     for (i = 0; i < length; i++) {

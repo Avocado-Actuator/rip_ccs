@@ -75,10 +75,10 @@ int main(void) {
 //    newID = rotateAtCurrent(addr, 11.1);
     // Loop forever echoing data through the UART.
     while(1) {
-//        if(sendMsgFlag == 1) {
-//            sendMsgFlag = 0;
-//            newID = getTemperature(addr);
-////            UARTprintf("Sent message ID: %d\n", newID);
-//        }
+        if(sendMsgFlag == 1) {
+            sendMsgFlag = 0;
+            newID = setEStopBehavior(addr, 0x1);
+//            UARTprintf("Sent message ID: %d\n", newID);
+        }
     }
 }
