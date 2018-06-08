@@ -5,6 +5,9 @@ uint8_t recv[10];
 
 uint8_t message_counter, panic_counter, heartbeat_panic_counter;
 
+uint8_t ADDR_IND, ADDRSET_IND, ID_IND, COM_IND, PAR_VAL_OFFSET;
+uint16_t NO_RESPONSE;
+
 uint32_t TIME, HEARTBEAT_TIME;
 
 // <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
@@ -18,7 +21,7 @@ void Timer0IntHandler(void) {
 
     // island time except for heartbeats
     ++HEARTBEAT_TIME;
-    // expect heartbeat every 1000 ms
+    // expect heartbeat every 500 ms
     // user should send multiple in that time in case of corruption
     if(HEARTBEAT_TIME % 500 == 0) {
         UARTprintf(
@@ -89,6 +92,12 @@ void CommsInit(uint32_t g_ui32SysClock){
     BROADCAST_ADDR = 0xFF;
     ADDRSET_ADDR = 0xFE;
 
+    ADDR_IND        = 0;
+    ADDRSET_IND     = 2;
+    ID_IND          = 1;
+    COM_IND         = 2;
+    PAR_VAL_OFFSET  = 3;
+
     CMD_MASK = 0b10000000; // 1 is SET and 0 is GET
     PAR_MASK = 0b00000111; // gives just parameter selector bits
 
@@ -103,6 +112,8 @@ void CommsInit(uint32_t g_ui32SysClock){
     OUTPUT_FREE     = 0b11111011;
 
     STATUS          = 0b00000000;
+
+    NO_RESPONSE = 65535;
 
     message_counter = 0;
     panic_counter = 0;
@@ -299,7 +310,7 @@ void setData(enum Parameter par, union Flyte * value, bool verbose) {
  *
  * @param par - parameter to send
  */
-void sendData(enum Parameter par, bool verbose) {
+void sendData(enum Parameter par, uint8_t id, bool verbose) {
     union Flyte value;
     switch(par) {
 //        case Pos: {
@@ -373,13 +384,20 @@ void sendData(enum Parameter par, bool verbose) {
              break;
         }
     }
+    uint8_t msg[5];
     if (!(getStatus() & ~COMMAND_FAILURE)){ // true if command failed
 //        UARTprintf("Get failed :(\n");
-        uint8_t temp = getStatus();
-        UARTSend(&temp, 1);
+        msg[0] = getStatus();
+        msg[1] = id;
+        UARTSend(msg, 2);
     } else {
 //        UARTprintf("Get succeeded! :)\n");
-        UARTSend(value.bytes, 4);
+        msg[0] = id;
+        int i;
+        for(i = 0; i < 4; ++i)
+            msg[i+1] = value.bytes[i];
+
+        UARTSend(msg, 5);
     }
 }
 
@@ -397,14 +415,14 @@ void sendData(enum Parameter par, bool verbose) {
  * @param length - the length of the message
  * @param verbose - if true print to console for debugging
  * @param echo - if true simply echo the message, can also be helpful for debugging
- * @return if we successfully handled a message meant for us
+ * @return if response needed, valid id 0-255, else 65535 (max size of uint16_t)
  */
-bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
+uint16_t handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
     // get address
-    uint8_t tempaddr = buffer[0];
+    uint8_t tempaddr = buffer[ADDR_IND];
 
     // get out quick on broadcast address
-    if(tempaddr == BROADCAST_ADDR) return false;
+    if(tempaddr == BROADCAST_ADDR) return NO_RESPONSE;
 
     if(verbose) {
         UARTprintf("\nNew message:\n");
@@ -417,34 +435,38 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
 
     if(verbose) UARTprintf("Address: %x\n", tempaddr);
 
+
     uint8_t crcin = recv[length-2];
     if (crc8(0, (uint8_t *)recv, length-2) != crcin){
         // ********** ERROR ***********
         // Handle corrupted message
         UARTprintf("Corrupted message, panic!\n");
         ++panic_counter;
-        return true;
+        return NO_RESPONSE;
     }
+
+    uint8_t id = recv[ID_IND];
+    if(verbose) UARTprintf("ID: %x\n", id);
 
     if (tempaddr == ADDRSET_ADDR) {
-        setAddress(buffer[1]);
+        setAddress(buffer[ADDRSET_IND]);
         if(verbose) UARTprintf("Set address to %x\n", getAddress());
         setStatus(COMMAND_SUCCESS);
-        return true;
+        return (uint16_t) id;
     } else if(tempaddr != getAddress()) {
         if(verbose) UARTprintf("Not my address, abort\n");
-        return false;
+        return NO_RESPONSE;
     }
 
-    enum Command type = buffer[1] & CMD_MASK ? Set : Get;
+    enum Command type = buffer[COM_IND] & CMD_MASK ? Set : Get;
     if(verbose) UARTprintf("Command: %s\n", getCommandName(type));
 
 
-    enum Parameter par = buffer[1] & PAR_MASK;
+    enum Parameter par = buffer[COM_IND] & PAR_MASK;
     if(par > MAX_PAR_VAL) {
         if(verbose) UARTprintf("No parameter specified, abort");
-//        clearStatus(COMMAND_FAILURE);
-        return true;
+        clearStatus(COMMAND_FAILURE);
+        return (uint16_t) id;
     }
 
     if(verbose) UARTprintf("Parameter: %s\n", getParameterName(par));
@@ -453,7 +475,7 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
         if (length < 5){
             if(verbose) UARTprintf("No value provided, abort\n");
             clearStatus(COMMAND_FAILURE);
-            return true;
+            return (uint16_t) id;
         }
 
         // if the cmd is Set then the next entity is a value. This value is either a single float
@@ -461,17 +483,17 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
         union Flyte setval;
         int i;
         for (i = 0; i < length - 4; i++)
-            setval.bytes[i] = buffer[i+2];
+            setval.bytes[i] = buffer[i+PAR_VAL_OFFSET];
 
         if(verbose) {
             UARTprintf("Setting value\n");
             UARTPrintFloat(setval.f, true);
         }
         setData(par, &setval, verbose);
-        return true;
+        return (uint16_t) id;
     } else {
-        sendData(par, verbose);
-        return false;
+        sendData(par, id, verbose);
+        return NO_RESPONSE;
     }
 }
 
@@ -551,14 +573,25 @@ void UARTIntHandler(void) {
     // Loop while there are characters in the receive FIFO.
     // Read the next character from the UART and write it back to the UART.
     uint8_t character = ROM_UARTCharGetNonBlocking(UART7_BASE);
+//    UARTprintf("Byte: %x\n", character);
     recv[recvIndex++] = character;
 
     if(character == STOP_BYTE) {
         HEARTBEAT_TIME = 0;
+        uint8_t len = recvIndex;
+        recvIndex = 0;
 
-        if(handleUART(recv, recvIndex, /*verbose=*/true, /*echo=*/false)) {
-            uint8_t temp = getStatus();
-            UARTSend(&temp, 1);
+        if(len >= 3) {
+            uint16_t id = handleUART(recv, len, /*verbose=*/false, /*echo=*/false);
+            if(id == NO_RESPONSE) {}
+            else if(id < 256) {
+                uint8_t msg[2];
+                msg[0] = (uint8_t) id;
+                msg[1] = getStatus();
+                UARTSend(msg, 2);
+            } else {
+                UARTprintf("\n\n\n\n\n\n\n\nRECEIVED MESSAGE WITH LENGTH < 3\n\n\n\n\n\n\n\n");
+            }
         }
 
         if(message_counter == 100) {
@@ -568,7 +601,6 @@ void UARTIntHandler(void) {
         }
 
         ++message_counter;
-        recvIndex = 0;
     }
 
 //    ROM_UARTCharPutNonBlocking(UART0_BASE, character);
