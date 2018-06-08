@@ -17,9 +17,9 @@ void Timer0IntHandler(void) {
 
     // island time except for heartbeats
     ++HEARTBEAT_TIME;
-    // expect heartbeat every 200 ms
+    // expect heartbeat every 1000 ms
     // user should send multiple in that time in case of corruption
-    if(HEARTBEAT_TIME % 20'000 == 0) {
+    if(HEARTBEAT_TIME % 100'000 == 0) {
         UARTprintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n%d PANIC ESTOP, NO HEARTBEAT\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", panic_counter++);
     }
 }
@@ -540,8 +540,9 @@ void UARTIntHandler(void) {
     // Clear the asserted interrupts.
     ROM_UARTIntClear(UART7_BASE, ui32Status);
 
+    ROM_UARTIntDisable(UART7_BASE, UART_INT_RX | UART_INT_RT);
+
     // Loop while there are characters in the receive FIFO.
-//    while(ROM_UARTCharsAvail(UART7_BASE)) {
     // Read the next character from the UART and write it back to the UART.
     uint8_t character = ROM_UARTCharGetNonBlocking(UART7_BASE);
     recv[recvIndex++] = character;
@@ -558,5 +559,5 @@ void UARTIntHandler(void) {
     SysCtlDelay(uartSysClock / (1000 * 3));
     // Turn off the LED
     GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
-//    }
+    ROM_UARTIntEnable(UART7_BASE, UART_INT_RX | UART_INT_RT);
 }
