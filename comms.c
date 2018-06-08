@@ -426,7 +426,7 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
         // Handle corrupted message
         UARTprintf("Corrupted message, panic!\n");
         ++panic_counter;
-        return false;
+        return true;
     }
 
     if (tempaddr == ADDRSET_ADDR) {
@@ -455,7 +455,7 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
     if(type == Set) {
         if (length < 5){
             if(verbose) UARTprintf("No value provided, abort\n");
-//            clearStatus(COMMAND_FAILURE);
+            clearStatus(COMMAND_FAILURE);
             return true;
         }
 
@@ -557,7 +557,10 @@ void UARTIntHandler(void) {
     recv[recvIndex++] = character;
 
     if(character == STOP_BYTE) {
-        handleUART(recv, recvIndex, false, false);
+        if(handleUART(recv, recvIndex, /*verbose=*/true, /*echo=*/false)) {
+            uint8_t temp = getStatus();
+            UARTSend(&temp, 1);
+        }
         if(message_counter == 100) {
             UARTprintf("\nPanic ratio: %d/100\n", panic_counter);
             message_counter = 0;
