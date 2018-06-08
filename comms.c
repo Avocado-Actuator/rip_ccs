@@ -22,8 +22,8 @@ void Timer0IntHandler(void) {
     // user should send multiple in that time in case of corruption
     if(HEARTBEAT_TIME % 500 == 0) {
         UARTprintf(
-                "\n\n\n\n\n\n\n\n\n\n\n%d PANIC ESTOP, NO HEARTBEAT\n\n\n\n\n\n\n\n\n\n\n",
-                heartbeat_panic_counter++);
+            "\n\n\n\n\n\n\n\n%d PANIC ESTOP, NO HEARTBEAT\n\n\n\n\n\n\n\n",
+            heartbeat_panic_counter++);
     }
 }
 
@@ -403,11 +403,8 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
     // get address
     uint8_t tempaddr = buffer[0];
 
-    if(tempaddr == BROADCAST_ADDR) {
-//        UARTprintf("Resetting heartbeat time\n");
-        HEARTBEAT_TIME = 0;
-        return false;
-    }
+    // get out quick on broadcast address
+    if(tempaddr == BROADCAST_ADDR) return false;
 
     if(verbose) {
         UARTprintf("\nNew message:\n");
@@ -557,15 +554,19 @@ void UARTIntHandler(void) {
     recv[recvIndex++] = character;
 
     if(character == STOP_BYTE) {
+        HEARTBEAT_TIME = 0;
+
         if(handleUART(recv, recvIndex, /*verbose=*/true, /*echo=*/false)) {
             uint8_t temp = getStatus();
             UARTSend(&temp, 1);
         }
+
         if(message_counter == 100) {
             UARTprintf("\nPanic ratio: %d/100\n", panic_counter);
             message_counter = 0;
             panic_counter = 0;
         }
+
         ++message_counter;
         recvIndex = 0;
     }
