@@ -3,8 +3,9 @@
 uint8_t ADDR, BRAIN_ADDR, BROADCAST_ADDR, ADDRSET_ADDR;
 uint8_t recv[10];
 
+uint8_t message_counter, panic_counter, heartbeat_panic_counter;
+
 uint32_t TIME, HEARTBEAT_TIME;
-uint32_t panic_counter;
 
 // <<<<<<<<<<<<<<<>>>>>>>>>>>>>>
 // <<<<<<<<<<<< TIMER >>>>>>>>>>
@@ -19,8 +20,10 @@ void Timer0IntHandler(void) {
     ++HEARTBEAT_TIME;
     // expect heartbeat every 1000 ms
     // user should send multiple in that time in case of corruption
-    if(HEARTBEAT_TIME % 100'000 == 0) {
-        UARTprintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n%d PANIC ESTOP, NO HEARTBEAT\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", panic_counter++);
+    if(HEARTBEAT_TIME % 500 == 0) {
+        UARTprintf(
+                "\n\n\n\n\n\n\n\n\n\n\n%d PANIC ESTOP, NO HEARTBEAT\n\n\n\n\n\n\n\n\n\n\n",
+                heartbeat_panic_counter++);
     }
 }
 
@@ -31,7 +34,7 @@ void TimerInit(void) {
     // Configure 32-bit periodic timers.
     //1ms timer
     ROM_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
-    ROM_TimerLoadSet(TIMER0_BASE, TIMER_A, uartSysClock/100000);//was 1000, trigger every 1ms, 1000Hz
+    ROM_TimerLoadSet(TIMER0_BASE, TIMER_A, uartSysClock/1000);//was 1000, trigger every 1ms, 1000Hz
     // Setup the interrupts for the timer timeouts.
     ROM_IntEnable(INT_TIMER0A);
     ROM_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
@@ -100,6 +103,9 @@ void CommsInit(uint32_t g_ui32SysClock){
     OUTPUT_FREE     = 0b11111011;
 
     STATUS          = 0b00000000;
+
+    message_counter = 0;
+    panic_counter = 0;
 
     UARTprintf("Communication initialized\n");
 }
@@ -216,8 +222,8 @@ void UARTPrintFloat(float val, bool verbose) {
  * @param verbose - if true print to console for debugging
  */
 void setData(enum Parameter par, union Flyte * value, bool verbose) {
-    UARTprintf("\nin setData\n");
-    UARTprintf("Target value: %d\n", value->f);
+    if(verbose) UARTprintf("\nin setData\n");
+    if(verbose) UARTprintf("Target value: %d\n", value->f);
     switch(par) {
         case Pos: {
 //            setTargetAngle(value->f);
@@ -293,7 +299,7 @@ void setData(enum Parameter par, union Flyte * value, bool verbose) {
  *
  * @param par - parameter to send
  */
-void sendData(enum Parameter par) {
+void sendData(enum Parameter par, bool verbose) {
     union Flyte value;
     switch(par) {
 //        case Pos: {
@@ -320,10 +326,13 @@ void sendData(enum Parameter par) {
 //        }
 //
         case Tmp: {
-            UARTprintf("Current temperature: \n");
 //            UARTPrintFloat(getTemp(), false);
 //            value.f = getTemp();
             value.f = 123.987;
+            if(verbose) {
+                UARTprintf("Current temperature: \n");
+                UARTPrintFloat(value.f, true);
+            }
             setStatus(COMMAND_SUCCESS);
             break;
         }
@@ -370,7 +379,6 @@ void sendData(enum Parameter par) {
         UARTSend(&temp, 1);
     } else {
 //        UARTprintf("Get succeeded! :)\n");
-        UARTPrintFloat(value.f, true);
         UARTSend(value.bytes, 4);
     }
 }
@@ -417,6 +425,7 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
         // ********** ERROR ***********
         // Handle corrupted message
         UARTprintf("Corrupted message, panic!\n");
+        ++panic_counter;
         return false;
     }
 
@@ -464,7 +473,7 @@ bool handleUART(uint8_t* buffer, uint32_t length, bool verbose, bool echo) {
         setData(par, &setval, verbose);
         return true;
     } else {
-        sendData(par);
+        sendData(par, verbose);
         return false;
     }
 }
@@ -548,7 +557,13 @@ void UARTIntHandler(void) {
     recv[recvIndex++] = character;
 
     if(character == STOP_BYTE) {
-        handleUART(recv, recvIndex, true, false);
+        handleUART(recv, recvIndex, false, false);
+        if(message_counter == 100) {
+            UARTprintf("\nPanic ratio: %d/100\n", panic_counter);
+            message_counter = 0;
+            panic_counter = 0;
+        }
+        ++message_counter;
         recvIndex = 0;
     }
 
